@@ -1,0 +1,247 @@
+---
+# Source: espresso-review/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: espresso-sa1
+  labels:
+    helm.sh/chart: espresso-review-0.1.0
+    version: v1
+    app.kubernetes.io/name: espresso-review
+    app.kubernetes.io/instance: reviews
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: espresso-review/templates/serviceaccount_2.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: espresso-sa2
+  labels:
+    helm.sh/chart: espresso-review-0.1.0
+    version: v1
+    app.kubernetes.io/name: espresso-review
+    app.kubernetes.io/instance: reviews
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: espresso-review/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres
+type: Opaque
+data:
+  POSTGRES_PASSWORD: am9uZXM=  # Base64-encoded value for "jones"
+---
+# Source: espresso-review/templates/configMap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: espresso-review
+data:
+  SERVICE_VERSION: v1
+  POSTGRES_USER: postgres
+  POSTGRES_DB: innocent
+  POSTGRES_HOST: postgres-postgresql-ha-postgresql
+---
+# Source: espresso-review/templates/configMap_2.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: espresso-review-2
+data:
+  SERVICE_VERSION: v2
+  POSTGRES_USER: postgres
+  POSTGRES_DB: innocent
+  POSTGRES_HOST: postgres-postgresql-ha-postgresql
+---
+# Source: espresso-review/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: espresso-shop-reviews-svc
+  labels:
+    helm.sh/chart: espresso-review-0.1.0
+    version: v1
+    app.kubernetes.io/name: espresso-review
+    app.kubernetes.io/instance: reviews
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: 
+  ports:
+    - port: 8092
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    version: v1
+    app.kubernetes.io/name: espresso-review
+    app.kubernetes.io/instance: reviews
+    version: v2
+    app.kubernetes.io/name: espresso-review
+    app.kubernetes.io/instance: reviews
+---
+# Source: espresso-review/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: espresso-review
+  labels:
+    helm.sh/chart: espresso-review-0.1.0
+    version: v1
+    app.kubernetes.io/name: espresso-review
+    app.kubernetes.io/instance: reviews
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    matchLabels:
+      version: v1
+      app.kubernetes.io/name: espresso-review
+      app.kubernetes.io/instance: reviews
+  template:
+    metadata:
+      labels:
+        version: v1
+        app.kubernetes.io/name: espresso-review
+        app.kubernetes.io/instance: reviews
+    spec:
+      serviceAccountName: reviews-espresso-review
+      securityContext:
+        {}
+      containers:
+        - name: espresso-review
+          securityContext:
+            {}
+          image: "devopseasylearning/shop-reviews:v1.0.0"
+          imagePullPolicy: Always
+          # env:
+          # - name:  SERVICE_VERSION
+          #   value: v1
+          envFrom:
+          - configMapRef:
+              name: espresso-review
+          - secretRef:
+              name: postgres
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+# Source: espresso-review/templates/deployment_2.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  espresso-review2 
+  labels:
+    helm.sh/chart: espresso-review-0.1.0
+    version: v2
+    app.kubernetes.io/name: espresso-review
+    app.kubernetes.io/instance: reviews
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    matchLabels:
+      version: v2
+      app.kubernetes.io/name: espresso-review
+      app.kubernetes.io/instance: reviews
+  template:
+    metadata:
+      labels:
+        version: v2
+        app.kubernetes.io/name: espresso-review
+        app.kubernetes.io/instance: reviews
+    spec:
+      serviceAccountName: reviews-espresso-review
+      securityContext:
+        {}
+      containers:
+        - name: espresso-review
+          securityContext:
+            {}
+          image: "devopseasylearning/shop-reviews:v1.0.0"
+          imagePullPolicy: Always
+          
+          # env:
+          # - name: SERVICE_VERSION
+          #   value: v1
+          envFrom:
+          - configMapRef:
+              name: espresso-review-2
+          - secretRef:
+              name: postgres
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+# Source: espresso-review/templates/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: espresso-hpa1
+  labels:
+    helm.sh/chart: espresso-review-0.1.0
+    version: v1
+    app.kubernetes.io/name: espresso-review
+    app.kubernetes.io/instance: reviews
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: espresso-review
+  minReplicas: 1
+  maxReplicas: 100
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+# Source: espresso-review/templates/hpa_2.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: espresso-hpa2
+  labels:
+    helm.sh/chart: espresso-review-0.1.0
+    version: v2
+    app.kubernetes.io/name: espresso-review
+    app.kubernetes.io/instance: reviews
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: espresso-review2
+  minReplicas: 1
+  maxReplicas: 100
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80

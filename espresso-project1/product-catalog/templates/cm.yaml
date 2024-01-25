@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres
+data:
+  POSTGRES_USER: postgres
+  POSTGRES_DB: innocent
+  POSTGRES_HOST: postgres-postgresql-ha-postgresql
