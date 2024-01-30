@@ -1,0 +1,132 @@
+---
+# Source: product-catalog/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: product-product-catalog
+  labels:
+    helm.sh/chart: product-catalog-0.1.0
+    app.kubernetes.io/name: product-catalog
+    app.kubernetes.io/instance: product
+    version: v1
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: product-catalog/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-product-catalog
+  labels:
+    helm.sh/chart: product-catalog-0.1.0
+    app.kubernetes.io/name: product-catalog
+    app.kubernetes.io/instance: product
+    version: v1
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: NodePort
+  ports:
+    - port: 8091
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: product-catalog
+    app.kubernetes.io/instance: product
+    version: v1
+---
+# Source: product-catalog/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-product-catalog
+  labels:
+    helm.sh/chart: product-catalog-0.1.0
+    app.kubernetes.io/name: product-catalog
+    app.kubernetes.io/instance: product
+    version: v1
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: product-catalog
+      app.kubernetes.io/instance: product
+      version: v1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: product-catalog
+        app.kubernetes.io/instance: product
+        version: v1
+    spec:
+      serviceAccountName: product-product-catalog
+      securityContext:
+        {}
+      containers:
+        - name: product-catalog
+          securityContext:
+            {}
+          image: "devopseasylearning/shop-product-catalog:v1.0.0"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+# Source: product-catalog/templates/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: product-product-catalog
+  labels:
+    helm.sh/chart: product-catalog-0.1.0
+    app.kubernetes.io/name: product-catalog
+    app.kubernetes.io/instance: product
+    version: v1
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: product-product-catalog
+  minReplicas: 1
+  maxReplicas: 100
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+# Source: product-catalog/templates/tests/test-connection.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "product-product-catalog-test-connection"
+  labels:
+    helm.sh/chart: product-catalog-0.1.0
+    app.kubernetes.io/name: product-catalog
+    app.kubernetes.io/instance: product
+    version: v1
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['product-product-catalog:8091']
+  restartPolicy: Never
